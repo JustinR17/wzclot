@@ -3997,6 +3997,8 @@ class ClanLeague(Tournament):
             data += '<th>Template Name</th>'
             data += '<th>Template Link</th>'
             data += '<th>Players Per Team</th>'
+            if editable:
+                data += '<th>Divisions</th>'
             data += '<th>Next Game</th>'
             data += '</tr>'
 
@@ -4023,6 +4025,12 @@ class ClanLeague(Tournament):
                     data += '<td>{}</td>'.format(template.name)
                 data += '<td><a href="https://warzone.com/MultiPlayer?TemplateID={}" target="_blank" class="badge badge-primary">Template</a></td>'.format(template.templateid)
                 data += '<td>{}</td>'.format(template.players_per_team)
+                if editable:
+                    data += '<td><select name="divisions-select">'
+                    data += '<option value="{}" data-games="{}" data-team="{}">{}</option>'.format(0, 0, 0, "All")
+                    for division in ClanLeagueDivision.objects.filter(league=self):
+                        data += '<option value="{}" data-games="{}" data-team="{}">{}</option>'.format(division.id, division.id, division.id, division.title)
+                    data += '</select></td>'
 
                 # compute the countdown until the next game date
                 time_to_game = game_allocation_date
@@ -4034,6 +4042,17 @@ class ClanLeague(Tournament):
                 data += '<td class="time_to_boot">{}</td>'.format(time_to_game)
                 data += '</tr>'
             data += '</table>'
+        return data
+
+    def get_template_division_select(self):
+        data = ""
+        data += '<td><select name="divisions-select">'
+        data += '<option value="{}" data-games="{}" data-team="{}">{}</option>'.format(0, 0, 0, "All")
+        for division in ClanLeagueDivision.objects.filter(league=self):
+            data += '<option value="{}" data-games="{}" data-team="{}">{}</option>'.format(division.id, division.id,
+                                                                                           division.id,
+                                                                                           division.title)
+        data += '</select></td>'
         return data
 
     @property

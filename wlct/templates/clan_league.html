@@ -176,6 +176,12 @@
                             <option value="3">3</option>
                         </select>
                     </div>
+                    {% if tournament.created_by.token == request.session.token %}
+                    <div class="input-group">
+                        <label class="col-form-label" for="template_division"><b>Divisions:&nbsp;</b></label>
+                        {{  tournament.get_template_division_select|safe }}
+                    </div>
+                    {% endif %}
                     <div class="input-group" style="padding-top:25px;">
                         <button type="button" class="btn btn-sm btn-success" id="create-cl-template">+ Add New Template</button>
                     </div>
