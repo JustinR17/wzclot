@@ -1052,7 +1052,7 @@ class Tournament(models.Model):
                             tourney_team.save()
                             tourney_team_lost.rating = calculate_new_elo_rating(False, tourney_team_lost.rating, current_win_rating)
                             tourney_team_lost.losses += 1
-                            tourney_team_lost.buchholz += tourney_team.buchholz
+                            tourney_team_lost.buchholz +=  tourney_team.buchholz
                             tourney_team_lost.save()
                             processGameLog += "\nWinning team: {}, len(teams_won): {}".format(tourney_team_lost.id,
                                                                                             len(teams_lost))

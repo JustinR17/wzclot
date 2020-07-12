@@ -193,6 +193,13 @@ class Tasks(commands.Cog, name="tasks"):
                         tournament = find_tournament_by_id(game.tournament.id, True)
                         if tournament and hasattr(tournament, 'clan_league_template') and tournament.clan_league_template:
                             game_log_text += "\n{}".format(tournament.clan_league_template.name)
+                        elif tournament:
+                            game_log_text += "\n"
+                            if hasattr(tournament, 'parent_tournament'):
+                                game_log_text += "{} - ".format(tournament.parent_tournament.name)
+                            elif hasattr(tournament, 'current_season'):
+                                game_log_text += "{} - ".format(tournament.current_season.name)
+                            game_log_text += "{}".format(tournament.name)
 
                         game_log_text += "\n<{}>".format(game.game_link)
 
