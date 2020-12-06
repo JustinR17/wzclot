@@ -130,84 +130,91 @@ class Tasks(commands.Cog, name="tasks"):
                 odds.save()
 
     async def handle_game_logs(self):
-        channel_links = DiscordChannelTournamentLink.objects.all()
         games_sent = []
+
+        games_to_process = []
+        if hasattr(self.bot, 'uptime'):
+            games_to_process = TournamentGame.objects.filter(is_finished=True, game_finished_time__gt=(self.bot.uptime-datetime.timedelta(days=3)), game_log_sent=False)
+            log_bot_msg("Found {} games to process for game logs".format(len(games_to_process)))
+
         try:
-            for cl in channel_links:
-                channel = self.bot.get_channel(cl.channelid)
-                # for each channel, see if there are any new games that have finished in the tournament that's linked
-                # only look at games that have finished times greater than when the bot started
+            for game in games_to_process:
+                if game.game_finished_time is None and game.winning_team or not game.winning_team:
+                    # Something weird with this game... Raise warning to get game checked
+                    log("Game with missing finished_time/winning_team values: {}".format(game.gameid), LogLevel.warning)
+                    continue
+
+                channel_links = DiscordChannelTournamentLink.objects.filter(tournament=game.tournament)
                 game_log_text = ""
-                if hasattr(self.bot, 'uptime') and channel:
-                    games = self.orm_helpers.get_game_logs_for_tournament(cl.tournament, self.bot.uptime-datetime.timedelta(days=3))
-                    if len(games) > 0:
-                        log_bot_msg("Found {} games to log in channel {}".format(len(games), channel.name))
-                    for game in games:
-                        if game.game_finished_time is None and game.winning_team or not game.winning_team:
-                            continue  # ignore games with no finished time (which might be 0 and returned in this query)
-                        # we have the game, construct the log text and send it to the channel
 
-                        # Check if game passes player/clan filter
-                        if not cl.does_game_pass_filter(game):
-                            games_sent.append(game)
-                            continue
+                # Get game_log_text if there are channels to post to
+                if len(channel_links):
+                    # bold the clans if any, and italicize
+                    teams = game.teams.split('.')
+                    team_list = []
+                    team_list.append(game.winning_team.id)
+                    for team in teams:
+                        if int(team) not in team_list:
+                            team_list.append(int(team))
 
-                        # bold the clans if any, and italicize
-                        teams = game.teams.split('.')
-                        team_list = []
-                        team_list.append(game.winning_team.id)
-                        for team in teams:
-                            if int(team) not in team_list:
-                                team_list.append(int(team))
+                    player_team_id_list = None
+                    if game.players:
+                        player_team_id_list = game.players.split("-")
 
-                        player_team_id_list = None
-                        if game.players:
-                            player_team_id_list = game.players.split("-")
+                    wrote_defeats = False
+                    for team in team_list:
+                        tt = TournamentTeam.objects.filter(pk=team)
+                        if tt:
+                            tt = tt[0]
+                            # look up the clan for this team, and bold/write the clan name in there.
+                            if tt.clan_league_clan and tt.clan_league_clan.clan:
+                                game_log_text += "**{}** ".format(tt.clan_league_clan.clan.name)
 
-                        wrote_defeats = False
-                        for team in team_list:
-                            tt = TournamentTeam.objects.filter(pk=team)
-                            if tt:
-                                tt = tt[0]
-                                # look up the clan for this team, and bold/write the clan name in there.
-                                if tt.clan_league_clan and tt.clan_league_clan.clan:
-                                    game_log_text += "**{}** ".format(tt.clan_league_clan.clan.name)
+                            # if game has 'players' value, use that otherwise get names from TournamentPlayer
+                            if player_team_id_list:
+                                tplayers = player_team_id_list[teams.index(str(team))].split(".")
+                            else:
+                                tplayers = TournamentPlayer.objects.filter(team=tt)
 
-                                # if game has 'players' value, use that otherwise get names from TournamentPlayer
+                            for tplayer in tplayers:
                                 if player_team_id_list:
-                                    tplayers = player_team_id_list[teams.index(str(team))].split(".")
+                                    player_name = Player.objects.filter(token=tplayer)
+                                    player_name = player_name[0].name
                                 else:
-                                    tplayers = TournamentPlayer.objects.filter(team=tt)
+                                    player_name = tplayer.player.name
+                                game_log_text += "*{}*, ".format(player_name)
 
-                                for tplayer in tplayers:
-                                    if player_team_id_list:
-                                        player_name = Player.objects.filter(token=tplayer)
-                                        player_name = player_name[0].name
-                                    else:
-                                        player_name = tplayer.player.name
-                                    game_log_text += "*{}*, ".format(player_name)
+                            game_log_text = game_log_text[:-2]
+                            if not wrote_defeats:
+                                game_log_text += " defeats "
+                                wrote_defeats = True
 
-                                game_log_text = game_log_text[:-2]
-                                if not wrote_defeats:
-                                    game_log_text += " defeats "
-                                    wrote_defeats = True
+                    tournament = find_tournament_by_id(game.tournament.id, True)
+                    if tournament and hasattr(tournament, 'clan_league_template') and tournament.clan_league_template:
+                        game_log_text += "\n{}".format(tournament.clan_league_template.name)
 
-                        tournament = find_tournament_by_id(game.tournament.id, True)
-                        if tournament and hasattr(tournament, 'clan_league_template') and tournament.clan_league_template:
-                            game_log_text += "\n{}".format(tournament.clan_league_template.name)
+                    game_log_text += "\n<{}>".format(game.game_link)
 
-                        game_log_text += "\n<{}>".format(game.game_link)
+                    log_bot_msg(
+                        "Looping through {} channels to log: {}, length: {}".format(len(channel_links), game_log_text, len(game_log_text)))
 
-                        log_bot_msg("Looping through channels to log: {}, length: {}".format(game_log_text, len(game_log_text)))
-                        if channel and len(game_log_text) > 0:
-                            log_bot_msg("Sending game_log to channel: {}".format(channel.name))
-                            try:
-                                await channel.send(game_log_text)
-                                games_sent.append(game)
-                                game_log_text = ""
-                            except:
-                                log_bot_msg("Exception: {} when sending message to server {}, channel {}".format(log_exception(), channel.guild.name, channel.name))
+                for cl in channel_links:
+                    channel = self.bot.get_channel(cl.channelid)
 
+                    # Check if game passes player/clan filter
+                    if not cl.does_game_pass_filter(game):
+                        continue
+
+                    if channel and len(game_log_text) > 0:
+                        log_bot_msg("Sending game_log for {} to channel: {}".format(game.gameid, channel.name))
+                        try:
+                            await channel.send(game_log_text)
+                        except:
+                            log_bot_msg("Exception: {} when sending message to server {}, channel {}".format(log_exception(),
+                                                                                                 channel.guild.name,
+                                                                                                 channel.name))
+                # Add game to games_sent to finalize processing
+                games_sent.append(game)
         except Exception:
             log_exception()
         finally:
