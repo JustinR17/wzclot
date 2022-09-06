@@ -135,7 +135,7 @@ class Player(models.Model):
     bot_token = models.CharField(max_length=34, default=invalid_token_string, db_index=True)
     discord_member = models.ForeignKey('DiscordUser', blank=True, null=True, on_delete=models.CASCADE,
                                        related_name='discord')
-    deleted = models.BooleanField(default=False)
+    deleted = models.BooleanField(default=False, db_index=True)
     rating = models.IntegerField(default=1500)
     wins = models.IntegerField(default=0)
     losses = models.IntegerField(default=0)

@@ -4760,7 +4760,7 @@ class PromotionalRelegationLeagueSeason(Tournament):
         table += '<thead><tr><th>Player Name</th><th> </th></tr></thead><tbody id="invite-filter-table">'
 
         is_player_available = False
-        players = Player.objects.all()
+        players = Player.objects.filter(deleted=False)
         # list of player names associated with the rows so that we can do easy filtering on the client
         # side
         for player in players:
@@ -5687,7 +5687,7 @@ class ClanLeague(Tournament):
     def get_players_select(self):
         data = '<select id="clanleague-add-playerlist">'
 
-        players = Player.objects.all()
+        players = Player.objects.filter(deleted=False)
         for player in players:
             data += '<option value="{}">{}</option>'.format(player.id, player.name)
 
@@ -5807,7 +5807,7 @@ class ClanLeague(Tournament):
 
         print("Request data to generate CL player list: {}".format(request_data))
         is_player_available = False
-        players = Player.objects.all()
+        players = Player.objects.filter(deleted=False)
         # list of player names associated with the rows so that we can do easy filtering on the client
         # side
         for player in players:
