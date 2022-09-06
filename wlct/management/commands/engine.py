@@ -248,7 +248,7 @@ class Command(BaseCommand):
             return
 
         log("Updating player clans for all players", LogLevel.engine)
-        players = Player.objects.all()
+        players = Player.objects.filter(deleted=False)
         update_player_clans(players, self)
 
     def is_correct_player(self, player_token, player_team):
