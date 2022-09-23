@@ -296,6 +296,17 @@ class Clot(commands.Cog, name="clot"):
                     self.bot.process_queue.append(tournament.id)
                     await ctx.send("Successfully queued up {} to be processed".format(tournament.name))
                     return
+            elif cmd == "deleted_players":
+                players = await self.bot.bridge.getPlayers(deleted=True)
+                await ctx.send("**Deleted Players:**\n{}".format(
+                    "\n".join(
+                        map(
+                            lambda p: "    -'{}' (ID: {})".format(p.name, p.id),
+                            players
+                        )
+                    )
+                ))
+                return
             elif cmd == "create_game":
                 if not is_clotadmin(ctx.message.author.id):
                     await ctx.send("Only CLOT admins can use this command")

@@ -115,12 +115,12 @@ class Command(BaseCommand):
             return
 
         ladder = get_multi_day_ladder(168)
-        round = TournamentRound.objects.filter(tournament=ladder, round_number=1)
-        if not round:
-            round = TournamentRound(tournament=ladder, round_number=1)
-            round.save()
+        tround = TournamentRound.objects.filter(tournament=ladder, round_number=1)
+        if not tround:
+            tround = TournamentRound(tournament=ladder, round_number=1)
+            tround.save()
         else:
-            round = round[0]
+            tround = tround[0]
 
         data = json.loads(content)
         for index, game_data in enumerate(data['games']):
@@ -178,7 +178,7 @@ class Command(BaseCommand):
                     game = TournamentGame(game_link=game_link, gameid=game_id,
                                           players_per_team=1,
                                           team_game=False, tournament=ladder, is_finished=True,
-                                          teams=teams, round=round, game_finished_time=finished, game_start_time=created)
+                                          teams=teams, round=tround, game_finished_time=finished, game_start_time=created)
                     game.save()
                     entry = TournamentGameEntry(team=tplayers[0].team, team_opp=tplayers[1].team, game=game,
                                                 tournament=ladder)
@@ -343,8 +343,8 @@ class Command(BaseCommand):
 
     def cleanup_logs(self):
         # get all the logs older than 2 days
-        nowdate = datetime.datetime.utcnow()
-        enddate = nowdate - datetime.timedelta(days=2)
+        now_date = datetime.datetime.utcnow()
+        end_date = now_date - datetime.timedelta(days=2)
 
         for log_type, value in vars(LogLevel).items():
             if self.shutdown:
@@ -353,13 +353,13 @@ class Command(BaseCommand):
                 if value == LogLevel.process_game or value == LogLevel.game or value == LogLevel.game_status:
                     games = TournamentGame.objects.filter(is_finished=True)
                     LogManager(value, game__is_finished=True).prune_keep_last(games, hours=1)
-                    LogManager(value, timestamp__lt=enddate, game__is_finished=False).prune()
+                    LogManager(value, timestamp__lt=end_date, game__is_finished=False).prune()
                 elif value == LogLevel.tournament or value == LogLevel.process_new_games:
                     tournaments = Tournament.objects.filter(is_finished=True)
                     LogManager(value, tournament__is_finished=True).prune_keep_last(tournaments, hours=1)
-                    LogManager(value, timestamp__lt=enddate, tournament__is_finished=False).prune()
+                    LogManager(value, timestamp__lt=end_date, tournament__is_finished=False).prune()
                 else:  # generic logging runtime cases
-                    LogManager(value, timestamp__lt=enddate, level=value).prune()
+                    LogManager(value, timestamp__lt=end_date, level=value).prune()
             gc.collect()
 
     def tournament_engine_real_time(self):

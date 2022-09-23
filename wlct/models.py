@@ -184,7 +184,7 @@ def update_player_clans(players, engine=None):
                     player.clan = None
                     player.clan_text = ""
                     player.save()
-            if "clotpass" not in p_data:
+            if "error" in p_data and p_data["error"] == "belongs to a deleted player":
                 # Player deleted their account :-(
                 player.deleted = True
         except:
